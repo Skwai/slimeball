@@ -1,4 +1,4 @@
-const GRAVITY = 30
+const GRAVITY = 40
 const DRAG = 0
 const TICK_RATE = 30
 
@@ -44,7 +44,7 @@ class Ball {
 
 class Player {
     MOVE_SPEED = 20
-    JUMP_SPEED = 200
+    JUMP_SPEED = 300
 
     x = 0
     y = 0
@@ -87,14 +87,29 @@ class Player {
     }
 
     colliding(ball: Ball) {
-        const angle = Math.atan2(this.y - ball.y, this.x - ball.x)
-        const distance = Math.sqrt((this.x - ball.x) * 2 + (this.y - ball.y) * 2)
+        const distance = Math.sqrt((this.x - ball.x) ** 2 + (this.y - ball.y) ** 2)
 
-        const collision = distance < this.radius + ball.radius
+        const collision = distance < (this.radius + ball.radius)
+
+
+        console.log(collision)
 
         if (collision) {
-            // console.log(distance)
-            // console.log(angle)
+            const angle = Math.atan2(this.y - ball.y, this.x - ball.x)
+
+            const relativeVelocity = {
+                x: this.speed.x - ball.speed.x,
+                y: this.speed.y - ball.speed.y
+            }
+
+            console.log(Math.cos(angle), Math.sin(angle))
+
+            // console.log(relativeVelocity)
+
+            const vector = {
+                y: -(this.x - ball.x),
+                x: this.y - ball.y
+            }
         }
 
         return collision
