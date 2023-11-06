@@ -1,34 +1,52 @@
-const GRAVITY = 40
+// https://flatredball.com/documentation/tutorials/math/circle-collision/#:~:text=Remember%20from%20the%20previous%20example,the%20image%20on%20the%20right.
+
+const GRAVITY = 20
 const DRAG = 0
-const TICK_RATE = 30
+const TICK_RATE = 60
+
+interface Position {
+    x: number
+    y: number
+}
 
 interface Bounds {
     width: number
     height: number
 }
 
+interface Vector {
+    x: number,
+    y: number
+}
 
-class Ball {
+class Ball implements Position {
     radius = 10
-    direction = 0
-    speed = { x: 0, y: 0 }
+    vector: Vector = { x: 0, y: 0 }
 
-    constructor(public x, public y, private bounds: Bounds) { }
+    constructor(public x: number, public y: number, private bounds: Bounds) { }
 
     move(...players: Player[]) {
-        this.speed.y -= -GRAVITY / TICK_RATE
+        this.vector.y -= -GRAVITY / TICK_RATE
 
-        this.x += this.speed.x
-        this.y += this.speed.y
+        this.x += this.vector.x
+        this.y += this.vector.y
 
         // Check for collision with players
         for (const player of players) {
-            if (player.colliding(this)) {
-                // console.log(this.x, this.y)
-                this.speed.y = -this.speed.y
-                this.x += this.speed.x
-                this.y += this.speed.y
+            const collision = player.collision(this)
+
+            if (collision) {
+                const [vector, position] = collision
+
+                this.vector = vector
+
+                // this.x += vector.x
+                // this.y += vector.y
+
+                this.x -= position.x
+                this.y -= position.y
             }
+
         }
     }
 
@@ -37,21 +55,20 @@ class Ball {
         ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
         ctx.fillStyle = 'green'
         ctx.fill()
-        // ctx.stroke()
         ctx.closePath()
     }
 }
 
-class Player {
-    MOVE_SPEED = 20
+class Player implements Position {
+    MOVE_SPEED = 10
     JUMP_SPEED = 300
 
     x = 0
     y = 0
     radius = 40
-    speed = { x: 0, y: 0 }
+    vector: Vector = { x: 0, y: 0 }
 
-    constructor(private nth: number, private bounds: Bounds) {
+    constructor(nth: number, private bounds: Bounds) {
         this.x = (this.bounds.width / 2 * nth) + this.bounds.width / 4
         this.y = this.bounds.height - this.radius
     }
@@ -69,51 +86,46 @@ class Player {
     }
 
     jump() {
-        if (this.speed.y === 0) {
-            this.speed.y -= (this.JUMP_SPEED / TICK_RATE)
-            this.y += this.speed.y
+        if (this.vector.y === 0) {
+            this.vector.y -= (this.JUMP_SPEED / TICK_RATE)
+            this.y += this.vector.y
         }
     }
 
     move() {
-        this.speed.y = this.speed.y + (GRAVITY / TICK_RATE)
+        this.vector.y = this.vector.y + (GRAVITY / TICK_RATE)
 
-        this.y += this.speed.y
+        this.y += this.vector.y
 
         if (this.y >= this.bounds.height - this.radius) {
             this.y = this.bounds.height - this.radius
-            this.speed.y = 0
+            this.vector.y = 0
         }
     }
 
-    colliding(ball: Ball) {
+    collision(ball: Ball): undefined | [Vector, Position] {
         const distance = Math.sqrt((this.x - ball.x) ** 2 + (this.y - ball.y) ** 2)
-
         const collision = distance < (this.radius + ball.radius)
-
-
-        console.log(collision)
 
         if (collision) {
             const angle = Math.atan2(this.y - ball.y, this.x - ball.x)
 
-            const relativeVelocity = {
-                x: this.speed.x - ball.speed.x,
-                y: this.speed.y - ball.speed.y
-            }
-
-            console.log(Math.cos(angle), Math.sin(angle))
-
-            // console.log(relativeVelocity)
+            const velocity = ball.vector.x + ball.vector.y
 
             const vector = {
-                y: -(this.x - ball.x),
-                x: this.y - ball.y
+                x: Math.cos(angle) * -velocity,
+                y: Math.sin(angle) * -velocity
             }
+
+            const position = {
+                x: Math.cos(angle) * (ball.radius + this.radius),
+                y: Math.sin(angle) * (ball.radius + this.radius),
+            }
+
+            return [vector, position]
         }
 
-        return collision
-
+        return undefined
     }
 
     draw(ctx: CanvasRenderingContext2D) {
@@ -147,7 +159,6 @@ export const game = (canvas: HTMLCanvasElement) => {
         playerA.move()
         playerB.move()
         ball.move(playerA, playerB)
-
         ball.draw(ctx)
         playerA.draw(ctx)
         playerB.draw(ctx)
